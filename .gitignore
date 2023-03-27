@@ -1,0 +1,6 @@
+/out
+/.vs
+/.idea
+/cmake-build-debug-system
+/roms
+ROM
