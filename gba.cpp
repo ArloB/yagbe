@@ -1,9 +1,8 @@
 #include <iostream>
-#include <fstream>
 #include <format>
 #include <SDL.h>
-#include <ranges>
 #include <bitset>
+#include <memory>
 
 #include "gba.hpp"
 #include "opcodes.h"
@@ -58,7 +57,7 @@ int main(int argc, char* argv[])
     registers = std::array< Register, 6 >();
     timer = std::make_unique<Timer>();
 
-    auto f = std::ifstream("E:/code/gba/roms/instr_timing.gb", std::ios::binary);
+    auto f = std::ifstream("E:/code/gba/roms/Tetris.gb", std::ios::binary);
 
     if (!f.is_open()) {
         std::cout << "Could not open rom\n";
@@ -85,9 +84,34 @@ int main(int argc, char* argv[])
         break;
     case 1:
     case 2:
-    case 3:
-        memory = std::unique_ptr<Mem>(new MBC1(nRAM, std::pow(2, nROM + 1)));
+        memory = std::unique_ptr<Mem>(new MBC1(nRAM, std::pow(2, nROM + 1), false));
         break;
+    case 3:
+        memory = std::unique_ptr<Mem>(new MBC1(nRAM, std::pow(2, nROM + 1), true));
+        break;
+    case 0x0F:
+        memory = std::unique_ptr<Mem>(new MBC3(nRAM, std::pow(2, nROM + 1), true, false));
+        break;
+    case 0x10:
+		memory = std::unique_ptr<Mem>(new MBC3(nRAM, std::pow(2, nROM + 1), true, true));
+        break;
+    case 0x11:
+    case 0x12:
+        memory = std::unique_ptr<Mem>(new MBC3(nRAM, std::pow(2, nROM + 1), false, false));
+        break;
+    case 0x13:
+        memory = std::unique_ptr<Mem>(new MBC3(nRAM, std::pow(2, nROM + 1), false, true));
+		break;
+    case 0x19:
+    case 0x1A:
+    case 0x1C:
+    case 0x1D:
+        memory = std::unique_ptr<Mem>(new MBC5(nRAM, std::pow(2, nROM + 1), false));
+        break;
+    case 0x1B:
+    case 0x1E:
+        memory = std::unique_ptr<Mem>(new MBC5(nRAM, std::pow(2, nROM + 1), true));
+		break;
     default:
         std::cout << "Unsupported memory chip: 0x" << std::hex << unsigned(chip) << "\n";
         return -1;
@@ -108,38 +132,35 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    if (SDL_CreateWindowAndRenderer(160, 144, 0, &win, &renderer)) {
-        std::cout << "Window could not be created\n";
-    }
-
-    SDL_RenderSetLogicalSize(renderer, 160, 144);
-    SDL_SetWindowResizable(win, SDL_TRUE);
-
-    renderTarget = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, 160, 144);
-    
-    (background = std::array<uint8_t, 262144>()).fill({});
-    (window = std::array<uint8_t, 262144>()).fill({});
-    (sprites = std::array<uint8_t, 262144>()).fill({});
-
-    memory->set(0xff42, 0);
-    memory->set(0xff43, 0);
+    PPU = std::make_unique<PPUObj>();
 
     uint8_t cycles = 0;
 
     while (1) {
+        if (!stopped) {
+            if (!halted) {
+                uint8_t op = memory->get($PC);
+                cycles = executeOp(op);
 
-        if (!halted) {
-             cycles = executeOp(memory->get($PC));
+                $PC++;
+            }
+            else {
+                cycles = 1;
+            }
 
-             $PC++;
+            PPU->step(cycles);
+
+            timer->tick(cycles);
+
+            checkInterrupts();
+
+            if (memory->get(0xff44) == 144) {
+				
+			}
         }
         else {
-            cycles = 1;
+
         }
-
-        checkInterrupts();
-
-        timer->tick(cycles);
     }
 
     return 0;

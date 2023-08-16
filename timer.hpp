@@ -4,7 +4,7 @@
 class Timer {
 public:
     Timer();
-    void reset();
+    void resetdiv();
     void tick(int cycles);
 private:
     uint16_t divider;

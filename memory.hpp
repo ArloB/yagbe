@@ -134,7 +134,7 @@ private:
 
 class MBC1 : public Mem {
 public:
-	MBC1(uint8_t nRAM, uint16_t nROM) {
+	MBC1(uint8_t nRAM, uint16_t nROM, bool battery) {
 		bROM = std::vector<uint8_t>(0x100);
 		rom = std::vector<uint8_t>(0x8000 + (0x4000 * (nROM - 2)));
 		vRAM = std::vector<uint8_t>(0x2000);
@@ -214,10 +214,6 @@ public:
 			return 0;
 		}
 		else if (addr < 0xFF80) {
-			if (addr == 0xff44) {
-				return 0x90;
-			}
-
 			return io[addr - 0xFF00];
 		}
 		else {
@@ -312,5 +308,286 @@ private:
 	bool mode = false;
 	bool boot_rom_active = false;
 };
+
+class MBC3 : public Mem {
+public:
+	MBC3(uint8_t nRAM, uint16_t nROM, bool rtc, bool battery) {
+		bROM = std::vector<uint8_t>(0x100);
+		rom = std::vector<uint8_t>(0x8000 + (0x4000 * (nROM - 2)));
+		vRAM = std::vector<uint8_t>(0x2000);
+		switch (nRAM) {
+		case 1:
+			cRAM = std::vector<uint8_t>(0x800); break;
+		case 2:
+			cRAM = std::vector<uint8_t>(0x2000); break;
+		case 3:
+			cRAM = std::vector<uint8_t>(0x8000); break;
+		}
+		wRAM = std::vector<uint8_t>(0x207F);
+		oam = std::vector<uint8_t>(0xA0);
+		io = std::vector<uint8_t>(0x80);
+		ie = 0;
+		rom_banks = nROM;
+		cRAM_enabled = ram_banks = nRAM;
+	}
+
+	~MBC3() = default;
+
+	inline uint8_t get(uint16_t addr) {
+		if (boot_rom_active && addr < 0x100) {
+			return bROM[addr];
+		}
+		else if (addr < 0x4000) {
+			return rom[addr];
+		}
+		else if (addr < 0x8000) {
+			return rom[0x4000 * rom_bank_number + (addr - 0x4000)];
+		}
+		else if (addr < 0xA000) {
+			return vRAM[addr - 0x8000];
+		}
+		else if (addr < 0xC000) {
+			if (cRAM_enabled) {
+				return cRAM[0x2000 * ram_bank_number + (addr - 0xA000)];
+			}
+
+			return 0xFF;
+		}
+		else if (addr < 0xE000) {
+			return wRAM[addr - 0xC000];
+		}
+		else if (addr < 0xFE00) {
+			return wRAM[addr - 0xE000];
+		}
+		else if (addr < 0xFEA0) {
+			return oam[addr - 0xFE00];
+		}
+		else if (addr < 0xFF00) {
+			return 0;
+		}
+		else if (addr < 0xFF80) {
+			return io[addr - 0xFF00];
+		}
+		else {
+			if (addr == 0xFFFF) {
+				return ie;
+			}
+			else {
+				return wRAM[0x2000 + (addr - 0xFF80)];
+			}
+		}
+	}
+
+	inline void set(uint16_t addr, uint8_t val) {
+		if (addr < 0x2000) {
+			cRAM_enabled = ((val & 0xF) == 0xA) && ram_banks;
+		}
+		else if (addr < 0x4000) {
+			rom_bank_number = val == 0 ? 1 : val & 127;
+		}
+		else if (addr < 0x6000) {
+			if (val < 3) {
+				ram_bank_number = val & 3;
+			} else if (val > 7 && val < 0xD) {
+				// RTC
+			}
+		}
+		else if (addr < 0x8000) {
+			// RTC Latch
+		}
+		else if (addr < 0xA000) {
+			vRAM[addr - 0x8000] = val;
+		}
+		else if (addr < 0xC000) {
+			cRAM[0x2000 * ram_bank_number + (addr - 0xA000)] = val;
+		}
+		else if (addr < 0xE000) {
+			wRAM[addr - 0xC000] = val;
+		}
+		else if (addr < 0xFE00) {
+			wRAM[addr - 0xE000] = val;
+		}
+		else if (addr < 0xFEA0) {
+			oam[addr - 0xFE00] = val;
+		}
+		else if (addr >= 0xFF00 && addr < 0xFF80) {
+			handleIO(addr - 0xFF00, val, this, this->io);
+		}
+		else {
+			if (addr == 0xFFFF) {
+				ie = val;
+			}
+			else {
+				wRAM[0x2000 + (addr - 0xFF80)] = val;
+			}
+		}
+	}
+
+	void loadROM(std::ifstream& f) {
+		loadR(f, rom);
+	}
+
+	void loadBootROM(std::string f) {
+		boot_rom_active = loadBR(f, bROM);
+	}
+
+	inline bool isBRActive() {
+		return boot_rom_active;
+	}
+
+	void disableBR() {
+		boot_rom_active = false;
+	}
+
+private:
+	bool cRAM_enabled = false;
+	std::vector<uint8_t> bROM, rom, vRAM, cRAM, wRAM, oam, io;
+	uint8_t ie;
+	uint16_t rom_banks;
+	uint8_t ram_banks;
+	uint16_t rom_bank_number = 1;
+	uint16_t ram_bank_number = 1;
+	bool boot_rom_active = false;
+};
+
+class MBC5 : public Mem {
+public:
+	MBC5(uint8_t nRAM, uint16_t nROM, bool battery) {
+		bROM = std::vector<uint8_t>(0x100);
+		rom = std::vector<uint8_t>(0x8000 + (0x4000 * (nROM - 2)));
+		vRAM = std::vector<uint8_t>(0x2000);
+		switch (nRAM) {
+		case 1:
+			cRAM = std::vector<uint8_t>(0x800); break;
+		case 2:
+			cRAM = std::vector<uint8_t>(0x2000); break;
+		case 3:
+			cRAM = std::vector<uint8_t>(0x8000); break;
+		}
+		wRAM = std::vector<uint8_t>(0x207F);
+		oam = std::vector<uint8_t>(0xA0);
+		io = std::vector<uint8_t>(0x80);
+		ie = 0;
+		rom_banks = nROM;
+		cRAM_enabled = ram_banks = nRAM;
+	}
+
+	~MBC5() = default;
+
+	inline uint8_t get(uint16_t addr) {
+		if (boot_rom_active && addr < 0x100) {
+			return bROM[addr];
+		}
+		else if (addr < 0x4000) {
+			return rom[addr];
+		}
+		else if (addr < 0x8000) {
+			return rom[0x4000 * rom_bank_number + (addr - 0x4000)];
+		}
+		else if (addr < 0xA000) {
+			return vRAM[addr - 0x8000];
+		}
+		else if (addr < 0xC000) {
+			if (cRAM_enabled) {
+				return cRAM[0x2000 * ram_bank_number + (addr - 0xA000)];
+			}
+
+			return 0xFF;
+		}
+		else if (addr < 0xE000) {
+			return wRAM[addr - 0xC000];
+		}
+		else if (addr < 0xFE00) {
+			return wRAM[addr - 0xE000];
+		}
+		else if (addr < 0xFEA0) {
+			return oam[addr - 0xFE00];
+		}
+		else if (addr < 0xFF00) {
+			return 0;
+		}
+		else if (addr < 0xFF80) {
+			return io[addr - 0xFF00];
+		}
+		else {
+			if (addr == 0xFFFF) {
+				return ie;
+			}
+			else {
+				return wRAM[0x2000 + (addr - 0xFF80)];
+			}
+		}
+	}
+
+	inline void set(uint16_t addr, uint8_t val) {
+		if (addr < 0x2000) {
+			cRAM_enabled = ((val & 0xF) == 0xA) && ram_banks;
+		}
+		else if (addr < 0x2000) {
+			rom_bank_number = val;
+		}
+		else if (addr < 0x3000) {
+			rom_bank_number = (rom_bank_number & ~(1UL << 8)) | (val & 1 << 8);
+		}
+		else if (addr < 0x6000) {
+			ram_bank_number = val;
+		}
+		else if (addr < 0x8000) {}
+		else if (addr < 0xA000) {
+			vRAM[addr - 0x8000] = val;
+		}
+		else if (addr < 0xC000) {
+			cRAM[0x2000 * ram_bank_number + (addr - 0xA000)] = val;
+		}
+		else if (addr < 0xE000) {
+			wRAM[addr - 0xC000] = val;
+		}
+		else if (addr < 0xFE00) {
+			wRAM[addr - 0xE000] = val;
+		}
+		else if (addr < 0xFEA0) {
+			oam[addr - 0xFE00] = val;
+		}
+		else if (addr >= 0xFF00 && addr < 0xFF80) {
+			handleIO(addr - 0xFF00, val, this, this->io);
+		}
+		else {
+			if (addr == 0xFFFF) {
+				ie = val;
+			}
+			else {
+				wRAM[0x2000 + (addr - 0xFF80)] = val;
+			}
+		}
+	}
+
+	void loadROM(std::ifstream& f) {
+		loadR(f, rom);
+	}
+
+	void loadBootROM(std::string f) {
+		boot_rom_active = loadBR(f, bROM);
+	}
+
+	inline bool isBRActive() {
+		return boot_rom_active;
+	}
+
+	void disableBR() {
+		boot_rom_active = false;
+	}
+
+private:
+	bool cRAM_enabled = false;
+	std::vector<uint8_t> bROM, rom, vRAM, cRAM, wRAM, oam, io;
+	uint8_t ie;
+	uint16_t rom_banks;
+	uint8_t ram_banks;
+	uint16_t rom_bank_number = 1;
+	uint16_t ram_bank_number = 1;
+	bool boot_rom_active = false;
+};
+
+inline std::unique_ptr<Mem> memory;
 
 #endif // MEMORY_H

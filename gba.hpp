@@ -26,13 +26,13 @@ union Register {
 #pragma pack()
 };
 
-inline std::unique_ptr<Mem> memory;
 inline std::array< Register, 6 > registers;
 inline std::unique_ptr<Timer> timer;
 
 inline bool ime_sched = false;
 inline bool IME = true;
 inline bool halted = false;
+inline bool stopped = false;
 
 // Registers
 #define $A  registers[0].bytes.hi

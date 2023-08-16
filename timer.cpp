@@ -6,9 +6,8 @@ Timer::Timer() {
     timer = 0;
 }
 
-void Timer::reset() {
+void Timer::resetdiv() {    
     divider = 0;
-    timer = 0;
 }
 
 void Timer::tick(int cycles) {
@@ -33,21 +32,18 @@ void Timer::tick(int cycles) {
             freq = 64; break;
         case 3:
             freq = 256; break;
-        case 0:
+        default:
             freq = 1024;
         }
 
         while (timer >= freq) {
             timer -= freq;
 
-            uint8_t TIMA = memory->get(0xff05);
+            uint8_t TIMA = memory->get(0xff05) + 1;
 
-            if (TIMA == 0xFF) {
+            if (TIMA == 0x00) {
                 TIMA = memory->get(0xff06);
                 memory->set(0xff0f, memory->get(0xff0f) | 0x04);
-            }
-            else {
-                TIMA++;
             }
 
             memory->set(0xff05, TIMA);
