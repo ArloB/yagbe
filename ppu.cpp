@@ -39,6 +39,18 @@ int COLORS[] = {
         0x00,0x00,0x00
 };
 
+/**
+ * @brief Calculates the pixel data for the background and window layers for a given scanline.
+ *
+ * This function renders the background and window layers for the specified `row` (scanline).
+ * It reads tile data and tile maps from VRAM based on LCDC register settings,
+ * SCX/SCY scroll registers, and WX/WY window position registers.
+ * Colors are determined using the BGP palette register (0xFF47).
+ * The results are stored in the `background` and `window` pixel arrays.
+ * It also renders sprites that are visible on this scanline.
+ *
+ * @param row The current scanline number (LY register value, 0-143 for visible lines).
+ */
 void PPUObj::calculateMaps(uint8_t row) {
     uint8_t LCDC = memory->get(0xff40);
     
@@ -47,50 +59,73 @@ void PPUObj::calculateMaps(uint8_t row) {
     uint8_t WY = memory->get(0xff4a);
     uint8_t WX = memory->get(0xff4b) - 7;
 
-    uint16_t tilemap = LCDC >> 3 & 1 ? 0x9c00 : 0x9800;
-    uint16_t tiledata = LCDC >> 4 & 1 ? 0x8000 : 0x8800;
+    uint16_t bgTileMapArea = (LCDC & 0x08) ? 0x9C00 : 0x9800; // LCDC Bit 3 for BG
+    uint16_t windowTileMapArea = (LCDC & 0x40) ? 0x9C00 : 0x9800; // LCDC Bit 6 for Window
+    bool signedTileAddressing = !(LCDC & 0x10); // LCDC Bit 4: 0 = 0x8800 method, 1 = 0x8000 method
+    uint16_t tileDataBaseAddress = (LCDC & 0x10) ? 0x8000 : 0x8800;
     
     uint8_t palette = memory->get(0xff47);
 
-    for (int j = 0; j < 256; j++) {
-        uint8_t offY = row + SCY;
-        uint8_t offX = j + SCX;
-        int colour = 0;
+    for (int j = 0; j < 256; j++) { // Iterate across the 256-pixel wide virtual map
+        // Background Pixel
+        uint8_t offY_bg = row + SCY;
+        uint8_t offX_bg = j + SCX;
+        int colour_bg = 0;
 
-        int t = memory->get(tilemap + ((offY / 8 * 32) + (offX / 8)));
+        uint8_t tile_index_bg = memory->get(bgTileMapArea + ((offY_bg / 8 * 32) + (offX_bg / 8)));
+        uint16_t tile_addr_bg;
 
-        if (tiledata == 0x8800) {
-            colour = (memory->get(tiledata + 0x800 + ((int8_t)t * 0x10) + (offY % 8 * 2)) >> (7 - (offX % 8)) & 0x1) + ((memory->get(tiledata + 0x800 + ((int8_t)t * 0x10) + (offY % 8 * 2) + 1) >> (7 - (offX % 8)) & 0x1) * 2);
+        if (signedTileAddressing) { // 0x8800 method (signed index)
+            tile_addr_bg = tileDataBaseAddress + 0x800 + (((int8_t)tile_index_bg) * 0x10);
+        } else { // 0x8000 method (unsigned index)
+            tile_addr_bg = tileDataBaseAddress + (tile_index_bg * 0x10);
         }
-        else {
-            colour = (memory->get(tiledata + (t * 0x10) + (offY % 8 * 2)) >> (7 - (offX % 8)) & 0x1) + (memory->get(tiledata + (t * 0x10) + (offY % 8 * 2) + 1) >> (7 - (offX % 8)) & 0x1) * 2;
-        }
+        colour_bg = (memory->get(tile_addr_bg + (offY_bg % 8 * 2)) >> (7 - (offX_bg % 8)) & 0x1) + 
+                    ((memory->get(tile_addr_bg + (offY_bg % 8 * 2) + 1) >> (7 - (offX_bg % 8)) & 0x1) * 2);
+        
+        uint8_t colorfrompal_bg = (palette >> (2 * colour_bg)) & 3;
+        background[(row * 256 * 4) + (j * 4)] = COLORS[colorfrompal_bg * 3];
+        background[(row * 256 * 4) + (j * 4) + 1] = COLORS[colorfrompal_bg * 3 + 1];
+        background[(row * 256 * 4) + (j * 4) + 2] = COLORS[colorfrompal_bg * 3 + 2];
+        background[(row * 256 * 4) + (j * 4) + 3] = 0xff; // Mark as opaque for now
 
-        uint8_t colorfrompal = (palette >> (2 * colour)) & 3;
-        background[(row * 256 * 4) + (j * 4)] = COLORS[colorfrompal * 3];
-        background[(row * 256 * 4) + (j * 4) + 1] = COLORS[colorfrompal * 3 + 1];
-        background[(row * 256 * 4) + (j * 4) + 2] = COLORS[colorfrompal * 3 + 2];
-        background[(row * 256 * 4) + (j * 4) + 3] = 0xff;
+        // Window Pixel (if window enabled and active for this pixel on this row)
+        bool windowEnabled = (LCDC & 0x20); // LCDC Bit 5
+        if (windowEnabled && WX <= j && WY <= row) {
+            // Check if current pixel (j) is within window's horizontal range on screen (0-159)
+            // And current row is within window's vertical range on screen (0-143)
+            // This check is implicitly handled by how drawFrame later crops from the 256x256 buffers.
+            // The WX <= j and WY <= row determines if the window *starts* covering pixels.
 
-        if (LCDC >> 5 & 1 && WX <= j && j <= WX + 160 && WY <= row && row <= WY + 144) {
-            t = memory->get(tilemap + (((row - WY) / 8 * 32) + ((j - WX) / 8)));
+            uint8_t offY_win = row - WY;
+            uint8_t offX_win = j - WX;
+            int colour_win = 0;
 
-            if (tiledata == 0x8800) {
-                colour = (memory->get(tiledata + 0x800 + ((int8_t)t * 0x10) + ((row - WY) % 8 * 2)) >> (7 - ((j - WX) % 8)) & 0x1) + ((memory->get(tiledata + 0x800 + ((int8_t)t * 0x10) + ((row - WY) % 8 * 2) + 1) >> (7 - ((j - WX) % 8)) & 0x1) * 2);
+            uint8_t tile_index_win = memory->get(windowTileMapArea + ((offY_win / 8 * 32) + (offX_win / 8)));
+            uint16_t tile_addr_win;
+
+            if (signedTileAddressing) { // 0x8800 method
+                tile_addr_win = tileDataBaseAddress + 0x800 + (((int8_t)tile_index_win) * 0x10);
+            } else { // 0x8000 method
+                tile_addr_win = tileDataBaseAddress + (tile_index_win * 0x10);
             }
-            else {
-                colour = (memory->get(tiledata + (t * 0x10) + ((row - WY) % 8 * 2)) >> (7 - ((j - WX) % 8)) & 0x1) + (memory->get(tiledata + (t * 0x10) + ((row - WY) % 8 * 2) + 1) >> (7 - ((j - WX) % 8)) & 0x1) * 2;
-            }
 
-            colorfrompal = (palette >> (2 * colour)) & 3;
+            colour_win = (memory->get(tile_addr_win + (offY_win % 8 * 2)) >> (7 - (offX_win % 8)) & 0x1) +
+                         ((memory->get(tile_addr_win + (offY_win % 8 * 2) + 1) >> (7 - (offX_win % 8)) & 0x1) * 2);
+            
+            uint8_t colorfrompal_win = (palette >> (2 * colour_win)) & 3;
 
-            window[(row * 256 * 4) + (j * 4)] = COLORS[colorfrompal * 3];
-            window[(row * 256 * 4) + (j * 4) + 1] = COLORS[colorfrompal * 3 + 1];
-            window[(row * 256 * 4) + (j * 4) + 2] = COLORS[colorfrompal * 3 + 2];
-            window[(row * 256 * 4) + (j * 4) + 3] = 0xff;
+            window[(row * 256 * 4) + (j * 4)] = COLORS[colorfrompal_win * 3];
+            window[(row * 256 * 4) + (j * 4) + 1] = COLORS[colorfrompal_win * 3 + 1];
+            window[(row * 256 * 4) + (j * 4) + 2] = COLORS[colorfrompal_win * 3 + 2];
+            window[(row * 256 * 4) + (j * 4) + 3] = 0xff; // Mark as opaque
+        } else {
+            // If window not active here, ensure window buffer is transparent for this pixel
+            window[(row * 256 * 4) + (j * 4) + 3] = 0x00; 
         }
     }
 
+    // Sprite rendering (largely unchanged for this specific fix, but see conceptual points later)
     if (memory->get(0xff40) >> 1 & 1) {
         for (uint16_t i = 0xfe00; i < 0xfe9f; i += 4) {
             uint8_t y = memory->get(i);
@@ -136,6 +171,15 @@ void PPUObj::calculateMaps(uint8_t row) {
     }
 }
 
+/**
+ * @brief Draws the final composed frame to the screen.
+ *
+ * This function iterates through each pixel of the 160x144 framebuffer.
+ * It composites the background, window, and sprite layers (in that order,
+ * respecting transparency and priority where applicable, though current sprite
+ * implementation might overlay unconditionally if sprite pixel is not transparent).
+ * The resulting framebuffer is then updated to an SDL texture and rendered to the screen.
+ */
 void PPUObj::drawFrame() {
     for (int row = 0; row < 144; row++) {
         for (int col = 0; col < 160; col++) {

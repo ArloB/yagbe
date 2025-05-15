@@ -1,6 +1,9 @@
 /out
 /.vs
+/.vscode
 /.idea
 /cmake-build-debug-system
+/build
 /roms
+/SDL
 ROM

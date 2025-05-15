@@ -9,6 +9,14 @@ set( SDL_SHARED OFF CACHE BOOL "" FORCE )
 
 add_subdirectory(SDL)
 
-add_executable(gba gba.cpp "opcodes.cpp" "opcodes.h" "memory.cpp" "memory.hpp" "timer.hpp" "timer.cpp" ppu.cpp)
+set( TINYFILEDIALOGS_SOURCES tinyfiledialogs.c )
 
-target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC SDL2main SDL2-static )
+add_library( tinyfiledialogs STATIC ${TINYFILEDIALOGS_SOURCES} )
+
+add_executable(gba WIN32 "gba.cpp" "opcodes.cpp" "opcodes.h" "memory.cpp" "memory.hpp" "timer.hpp" "timer.cpp" "ppu.cpp")
+
+target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC SDL2main SDL2-static tinyfiledialogs )
+
+if(WIN32)
+    target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC comdlg32 ole32 )
+endif()

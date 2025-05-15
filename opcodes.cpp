@@ -40,24 +40,55 @@ const uint8_t cb_cycles[256] = {
     2,2,2,2,2,2,4,2,2,2,2,2,2,2,4,2
 };
 
+/**
+ * @brief Reads a byte from the specified memory address.
+ * @param addr The 16-bit memory address to read from.
+ * @return The 8-bit value read from memory.
+ */
 uint8_t read(uint16_t addr) {
     return memory->get(addr);
 }
 
+/**
+ * @brief Reads a 16-bit word from the specified memory address (little-endian).
+ * @param addr The 16-bit memory address to read the low byte from.
+ * @return The 16-bit value read from memory.
+ */
 uint16_t read16(uint16_t addr) {
     uint8_t a = memory->get(addr);
     uint8_t b = memory->get(addr + 1);
     return a | (b << 8);
 }
 
+/**
+ * @brief Writes a byte to the specified memory address.
+ * @param addr The 16-bit memory address to write to.
+ * @param val The 8-bit value to write.
+ */
 void write(uint16_t addr, uint8_t val) {
     memory->set(addr, val);
 }
 
+/**
+ * @brief Clears all CPU flags (Z, N, H, C).
+ * Sets Z, N, H, C flags to 0.
+ */
 void clearFlags() {
     $Z = 0; $N = 0; $HF = 0; $CR = 0;
 }
 
+/**
+ * @brief Adds two 8-bit values with an optional carry-in.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0.
+ * N: Reset (0).
+ * H: Set if carry from bit 3.
+ * C: Set if carry from bit 7.
+ * @param x The first 8-bit operand.
+ * @param y The second 8-bit operand.
+ * @param carry If true, the current carry flag ($CR) is added to the sum.
+ * @return The 8-bit result of the addition.
+ */
 uint8_t add(uint8_t x, uint8_t y, bool carry) {
     uint8_t c = (carry ? $CR : 0);
     uint8_t res = x + c + y;
@@ -70,10 +101,31 @@ uint8_t add(uint8_t x, uint8_t y, bool carry) {
     return res;
 }
 
+/**
+ * @brief Adds two 8-bit values.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0.
+ * N: Reset (0).
+ * H: Set if carry from bit 3.
+ * C: Set if carry from bit 7.
+ * @param x The first 8-bit operand.
+ * @param y The second 8-bit operand.
+ * @return The 8-bit result of the addition.
+ */
 uint8_t add(uint8_t x, uint8_t y) {
     return add(x, y, false);
 }
 
+/**
+ * @brief Adds two 16-bit values.
+ * Updates N, H, C flags. Z flag is not affected.
+ * N: Reset (0).
+ * H: Set if carry from bit 11.
+ * C: Set if carry from bit 15.
+ * @param x The first 16-bit operand.
+ * @param y The second 16-bit operand.
+ * @return The 16-bit result of the addition.
+ */
 uint16_t add(uint16_t x, uint16_t y) {
     uint16_t res = x + y;
 
@@ -84,6 +136,17 @@ uint16_t add(uint16_t x, uint16_t y) {
     return res;
 }
 
+/**
+ * @brief Adds an 8-bit signed value to a 16-bit value.
+ * Updates Z, N, H, C flags.
+ * Z: Reset (0).
+ * N: Reset (0).
+ * H: Set if carry from bit 3 of (x & 0xF) + (y & 0xF).
+ * C: Set if carry from bit 7 of (x & 0xFF) + (y & 0xFF).
+ * @param x The 16-bit operand.
+ * @param y The 8-bit operand (treated as signed).
+ * @return The 16-bit result of the addition.
+ */
 uint16_t add(uint16_t x, uint8_t y) {
     int16_t res = x + static_cast<int8_t>(y);
 
@@ -95,6 +158,18 @@ uint16_t add(uint16_t x, uint8_t y) {
     return static_cast<uint16_t>(res);
 }
 
+/**
+ * @brief Subtracts an 8-bit value and an optional carry-in from another 8-bit value.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0.
+ * N: Set (1).
+ * H: Set if borrow from bit 4.
+ * C: Set if borrow from bit 8.
+ * @param x The 8-bit minuend.
+ * @param y The 8-bit subtrahend.
+ * @param carry If true, the current carry flag ($CR) is also subtracted.
+ * @return The 8-bit result of the subtraction.
+ */
 uint8_t sub(uint8_t x, uint8_t y, bool carry) {
     uint8_t c = (carry ? $CR : 0);
     uint8_t res = x - c - y;
@@ -107,10 +182,30 @@ uint8_t sub(uint8_t x, uint8_t y, bool carry) {
     return res;
 }
 
+/**
+ * @brief Subtracts an 8-bit value from another 8-bit value.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0.
+ * N: Set (1).
+ * H: Set if borrow from bit 4.
+ * C: Set if borrow from bit 8.
+ * @param x The 8-bit minuend.
+ * @param y The 8-bit subtrahend.
+ * @return The 8-bit result of the subtraction.
+ */
 uint8_t sub(uint8_t x, uint8_t y) {
     return sub(x, y, false);
 }
 
+/**
+ * @brief Increments an 8-bit value.
+ * Updates Z, N, H flags. C flag is not affected.
+ * Z: Set if result is 0.
+ * N: Reset (0).
+ * H: Set if carry from bit 3.
+ * @param x The 8-bit value to increment.
+ * @return The incremented 8-bit value.
+ */
 uint8_t inc(uint8_t x) {
     uint8_t res = x + 1;
 
@@ -119,10 +214,25 @@ uint8_t inc(uint8_t x) {
     return res;
 }
 
+/**
+ * @brief Increments a 16-bit value.
+ * Flags are not affected.
+ * @param x The 16-bit value to increment.
+ * @return The incremented 16-bit value.
+ */
 uint16_t inc(uint16_t x) {
     return x + 1;
 }
 
+/**
+ * @brief Decrements an 8-bit value.
+ * Updates Z, N, H flags. C flag is not affected.
+ * Z: Set if result is 0.
+ * N: Set (1).
+ * H: Set if borrow from bit 4 (i.e., if (x & 0xF) < 1).
+ * @param x The 8-bit value to decrement.
+ * @return The decremented 8-bit value.
+ */
 uint8_t dec(uint8_t x) {
     uint8_t res = x - 1;
 
@@ -131,10 +241,27 @@ uint8_t dec(uint8_t x) {
     return res;
 }
 
+/**
+ * @brief Decrements a 16-bit value.
+ * Flags are not affected.
+ * @param x The 16-bit value to decrement.
+ * @return The decremented 16-bit value.
+ */
 uint16_t dec(uint16_t x) {
     return x - 1;
 }
 
+/**
+ * @brief Performs a bitwise AND operation on two 8-bit values.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0.
+ * N: Reset (0).
+ * H: Set (1).
+ * C: Reset (0).
+ * @param x The first 8-bit operand.
+ * @param y The second 8-bit operand.
+ * @return The 8-bit result of the AND operation.
+ */
 uint8_t and8(uint8_t x, uint8_t y) {
     uint8_t res = x & y;
 
@@ -143,6 +270,17 @@ uint8_t and8(uint8_t x, uint8_t y) {
     return res;
 }
 
+/**
+ * @brief Performs a bitwise OR operation on two 8-bit values.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0.
+ * N: Reset (0).
+ * H: Reset (0).
+ * C: Reset (0).
+ * @param x The first 8-bit operand.
+ * @param y The second 8-bit operand.
+ * @return The 8-bit result of the OR operation.
+ */
 uint8_t or8(uint8_t x, uint8_t y) {
     uint8_t res = x | y;
 
@@ -151,6 +289,17 @@ uint8_t or8(uint8_t x, uint8_t y) {
     return res;
 }
 
+/**
+ * @brief Performs a bitwise XOR operation on two 8-bit values.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0.
+ * N: Reset (0).
+ * H: Reset (0).
+ * C: Reset (0).
+ * @param x The first 8-bit operand.
+ * @param y The second 8-bit operand.
+ * @return The 8-bit result of the XOR operation.
+ */
 uint8_t xor8(uint8_t x, uint8_t y) {
     uint8_t res = x ^ y;
 
@@ -159,6 +308,16 @@ uint8_t xor8(uint8_t x, uint8_t y) {
     return res;
 }
 
+/**
+ * @brief Swaps the upper and lower nibbles of an 8-bit value.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0.
+ * N: Reset (0).
+ * H: Reset (0).
+ * C: Reset (0).
+ * @param x The 8-bit value to swap nibbles.
+ * @return The 8-bit value with swapped nibbles.
+ */
 uint8_t swap(uint8_t x) {
     uint8_t res = (x << 4) | (x >> 4);
 
@@ -167,6 +326,16 @@ uint8_t swap(uint8_t x) {
     return res;
 }
 
+/**
+ * @brief Performs an arithmetic shift left on an 8-bit value.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0.
+ * N: Reset (0).
+ * H: Reset (0).
+ * C: Set to the value of bit 7 of the original `x`.
+ * @param x The 8-bit value to shift.
+ * @return The 8-bit result of the shift operation.
+ */
 uint8_t sl(uint8_t x) {
     uint8_t res = x << 1;
 
@@ -175,6 +344,19 @@ uint8_t sl(uint8_t x) {
     return res;
 }
 
+/**
+ * @brief Performs a shift right on an 8-bit value.
+ * If `logical` is true, it's a logical shift right (SLA).
+ * If `logical` is false, it's an arithmetic shift right (SRA), preserving bit 7.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0.
+ * N: Reset (0).
+ * H: Reset (0).
+ * C: Set to the value of bit 0 of the original `x`.
+ * @param x The 8-bit value to shift.
+ * @param logical True for logical shift (SRL), false for arithmetic shift (SRA).
+ * @return The 8-bit result of the shift operation.
+ */
 uint8_t sr(uint8_t x, bool logical) {
     uint8_t res = logical ? x >> 1 : ((x >> 1) | (x & 0x80));
 
@@ -183,6 +365,20 @@ uint8_t sr(uint8_t x, bool logical) {
     return res;
 }
 
+/**
+ * @brief Rotates an 8-bit value left.
+ * If `carry` is true (RLC), bit 7 is moved to bit 0 and also to the Carry flag.
+ * If `carry` is false (RL), the Carry flag is moved to bit 0, and bit 7 is moved to the Carry flag.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0 (unless `isA` is true, then Z is 0).
+ * N: Reset (0).
+ * H: Reset (0).
+ * C: Set to the value of bit 7 of the original `x`.
+ * @param x The 8-bit value to rotate.
+ * @param carry True for RLC (rotate left through carry), false for RL (rotate left).
+ * @param isA True if the operation is on register A (RLCA/RLA), affects Z flag.
+ * @return The 8-bit result of the rotation.
+ */
 uint8_t rl(uint8_t x, bool carry, bool isA) {
     uint8_t res = (x << 1) | (carry ? (x & 128) != 0 : $CR);
 
@@ -193,10 +389,31 @@ uint8_t rl(uint8_t x, bool carry, bool isA) {
     return res;
 }
 
+/**
+ * @brief Rotates an 8-bit value left (not specific to register A).
+ * Calls `rl(x, carry, false)`.
+ * @param x The 8-bit value to rotate.
+ * @param carry True for RLC, false for RL.
+ * @return The 8-bit result of the rotation.
+ */
 uint8_t rl(uint8_t x, bool carry) {
     return rl(x, carry, false);
 }
 
+/**
+ * @brief Rotates an 8-bit value right.
+ * If `carry` is true (RRC), bit 0 is moved to bit 7 and also to the Carry flag.
+ * If `carry` is false (RR), the Carry flag is moved to bit 7, and bit 0 is moved to the Carry flag.
+ * Updates Z, N, H, C flags.
+ * Z: Set if result is 0 (unless `isA` is true, then Z is 0).
+ * N: Reset (0).
+ * H: Reset (0).
+ * C: Set to the value of bit 0 of the original `x`.
+ * @param x The 8-bit value to rotate.
+ * @param carry True for RRC (rotate right through carry), false for RR (rotate right).
+ * @param isA True if the operation is on register A (RRCA/RRA), affects Z flag.
+ * @return The 8-bit result of the rotation.
+ */
 uint8_t rr(uint8_t x, bool carry, bool isA) {
     uint8_t res = (x >> 1) | ((carry ? x & 1 : $CR) << 7);
 
@@ -207,22 +424,57 @@ uint8_t rr(uint8_t x, bool carry, bool isA) {
     return res;
 }
 
+/**
+ * @brief Rotates an 8-bit value right (not specific to register A).
+ * Calls `rr(x, carry, false)`.
+ * @param x The 8-bit value to rotate.
+ * @param carry True for RRC, false for RR.
+ * @return The 8-bit result of the rotation.
+ */
 uint8_t rr(uint8_t x, bool carry) {
     return rr(x, carry, false);
 }
 
+/**
+ * @brief Tests a specific bit of an 8-bit value.
+ * Updates Z, N, H flags. C flag is not affected.
+ * Z: Set if the tested bit is 0.
+ * N: Reset (0).
+ * H: Set (1).
+ * @param x The 8-bit value to test.
+ * @param pos The bit position to test (0-7).
+ */
 void test(uint8_t x, int pos) {
     $Z = ((x >> pos) & 1) == 0; $N = 0; $HF = 1;
 }
 
+/**
+ * @brief Sets a specific bit of an 8-bit value to 1.
+ * Flags are not affected.
+ * @param x The 8-bit value.
+ * @param pos The bit position to set (0-7).
+ * @return The 8-bit value with the specified bit set.
+ */
 uint8_t set(uint8_t x, int pos) {
     return x | (1 << pos);
 }
 
+/**
+ * @brief Resets (clears) a specific bit of an 8-bit value to 0.
+ * Flags are not affected.
+ * @param x The 8-bit value.
+ * @param pos The bit position to reset (0-7).
+ * @return The 8-bit value with the specified bit reset.
+ */
 uint8_t res(uint8_t x, int pos) {
     return x & (~(1 << pos));
 }
 
+/**
+ * @brief Executes a CB-prefixed opcode.
+ * These opcodes are typically bit manipulation, shift, and rotate instructions.
+ * @param op The 8-bit CB-prefixed opcode.
+ */
 inline void executePrefixOp(uint8_t op) {
     switch (op) {
     case 0x0:
@@ -1000,7 +1252,6 @@ uint8_t executeOp(uint8_t op) {
     bool imm_ime = false;
     uint8_t c = cycles[op];
     
-
     switch (op) {
     case 0x0:
         break;
