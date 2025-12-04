@@ -1,7 +1,7 @@
 #ifndef PPU_H
 #define PPU_H
 
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <array>
 #include <memory>
 

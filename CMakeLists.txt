@@ -1,15 +1,15 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.16)
 
 project(gba)
 
 set (CMAKE_CXX_STANDARD 20)
 
-set( SDL_STATIC ON CACHE BOOL "" FORCE )
-set( SDL_SHARED OFF CACHE BOOL "" FORCE )
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>" )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>" )
 
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
-add_subdirectory(SDL)
+add_subdirectory( SDL  EXCLUDE_FROM_ALL )
 
 set( TINYFILEDIALOGS_SOURCES tinyfiledialogs.c )
 
@@ -17,7 +17,7 @@ add_library( tinyfiledialogs STATIC ${TINYFILEDIALOGS_SOURCES} )
 
 add_executable(gba WIN32 "gba.cpp" "opcodes.cpp" "opcodes.h" "memory.cpp" "memory.hpp" "timer.hpp" "timer.cpp" "ppu.cpp" "apu.cpp" "apu.hpp")
 
-target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC SDL2main SDL2-static tinyfiledialogs )
+target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC SDL3::SDL3 tinyfiledialogs )
 
 if(WIN32)
     target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC comdlg32 ole32 )

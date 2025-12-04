@@ -1,7 +1,7 @@
 #include "memory.hpp"
 #include "iostream"
 #include "gba.hpp"
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include "tinyfiledialogs.h"
 #include "apu.hpp"
 
@@ -16,7 +16,8 @@
  * @return The updated value for the JOYP register, reflecting the current input state.
  */
 uint8_t getInput(uint8_t val) {
-    const uint8_t* keys = SDL_GetKeyboardState(NULL);
+    SDL_PumpEvents();
+    const bool * keys = SDL_GetKeyboardState(NULL);
     uint8_t joypad = 0x0F; // Initialize with all buttons unpressed (1 = unpressed in GB hardware)
     
     // Action buttons (bit 5 low selects these buttons)

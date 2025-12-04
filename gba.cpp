@@ -1,6 +1,7 @@
 #include <iostream>
 #include <format>
-#include <SDL.h>
+#include <SDL3/SDL_main.h>
+#include <SDL3/SDL.h>
 #include <memory>
 #include "tinyfiledialogs.h"
 
@@ -164,7 +165,7 @@ int main(int argc, char* argv[])
         $PC = 0x100; $SP = 0xFFFE;
     }
 
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+    if (! SDL_InitSubSystem(SDL_INIT_VIDEO)) {
         tinyfd_messageBox(
             "Error",
             "Could not INIT SDL",
@@ -180,8 +181,9 @@ int main(int argc, char* argv[])
     SDL_Event event;
 
     while (1) {
+        SDL_PumpEvents();
         while (SDL_PollEvent(&event)) {
-            if (event.type == SDL_QUIT) {
+            if (event.type == SDL_EVENT_QUIT) {
                 SDL_Quit();
                 return 0;
             }

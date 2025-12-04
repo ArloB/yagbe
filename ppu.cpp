@@ -4,18 +4,20 @@
 #include "tinyfiledialogs.h"
 
 PPUObj::PPUObj() {
-    if (SDL_CreateWindowAndRenderer(160, 144, 0, &win, &renderer)) {
+    if (! SDL_CreateWindowAndRenderer("YAGBA",160, 144, 0, &win, &renderer)) {
         tinyfd_messageBox("Error", "Window could not be created", "ok", "error", 1);
     }
 
     SDL_SetWindowSize(win, 480, 432);
-    SDL_RenderSetLogicalSize(renderer, 160, 144);
+    SDL_SetRenderLogicalPresentation(renderer, 160, 144, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
-    SDL_SetWindowResizable(win, SDL_TRUE);
+    SDL_SetWindowResizable(win, true);
 
     
 
     renderTarget = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, 160, 144);
+    SDL_SetTextureScaleMode(renderTarget, SDL_SCALEMODE_NEAREST);
+
 
     (background = std::array<uint8_t, 262144>()).fill({});
     (window = std::array<uint8_t, 262144>()).fill({});
@@ -208,7 +210,7 @@ void PPUObj::drawFrame() {
     }
 
     SDL_UpdateTexture(renderTarget, NULL, framebuffer.data(), 160 * sizeof(unsigned char) * 4);
-    SDL_RenderCopy(renderer, renderTarget, NULL, NULL);
+    SDL_RenderTexture(renderer, renderTarget, NULL, NULL);
     SDL_RenderPresent(renderer);
 }
 
