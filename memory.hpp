@@ -2,10 +2,10 @@
 #define MEMORY_H
 
 #include <vector>
-#include <cmath>
 #include <string>
 #include <fstream>
-#include <iostream>
+
+#include "gba.hpp"
 
 /**
  * @brief Abstract base class for memory controllers.
@@ -86,6 +86,15 @@ public:
 		}
 		else if (addr < 0xFF00) {
 			return 0;
+		}
+		else if (addr == 0xff04) {
+			return timer->readdiv();
+		}
+		else if (addr == 0xff0f) {
+			return io[addr - 0xFF00] | 0xE0;
+		}
+		else if (addr >= 0xFF10 && addr <= 0xFF3F) {
+			return apu->readRegister(addr);
 		}
 		else if (addr < 0xFF80) {
 			return io[addr - 0xFF00];
@@ -272,6 +281,15 @@ public:
 		else if (addr < 0xFF00) {
 			return 0;
 		}
+		else if (addr == 0xff04) {
+			return timer->readdiv();
+		}
+		else if (addr == 0xff0f) {
+			return io[addr - 0xFF00] | 0xE0;
+		}
+		else if (addr >= 0xFF10 && addr <= 0xFF3F) {
+			return apu->readRegister(addr);
+		}
 		else if (addr < 0xFF80) {
 			return io[addr - 0xFF00];
 		}
@@ -290,7 +308,7 @@ public:
 	 * @param addr The 16-bit memory address to write to.
 	 * @param val The byte value to write.
 	 */
-	inline void set(uint16_t addr, uint8_t val) {
+	inline void set(uint16_t addr, uint8_t val) {	
 		if (addr < 0x2000) {
 				cRAM_enabled = ((val & 0xF) == 0xA) && ram_banks;
 		}
@@ -444,6 +462,15 @@ public:
 		}
 		else if (addr < 0xFF00) {
 			return 0;
+		}
+		else if (addr == 0xff04) {
+			return timer->readdiv();
+		}
+		else if (addr == 0xff0f) {
+			return io[addr - 0xFF00] | 0xE0;
+		}
+		else if (addr >= 0xFF10 && addr <= 0xFF3F) {
+			return apu->readRegister(addr);
 		}
 		else if (addr < 0xFF80) {
 			return io[addr - 0xFF00];
@@ -605,6 +632,15 @@ public:
 		}
 		else if (addr < 0xFF00) {
 			return 0;
+		}
+		else if (addr == 0xff04) {
+			return timer->readdiv();
+		}
+		else if (addr == 0xff0f) {
+			return io[addr - 0xFF00] | 0xE0;
+		}
+		else if (addr >= 0xFF10 && addr <= 0xFF3F) {
+			return apu->readRegister(addr);
 		}
 		else if (addr < 0xFF80) {
 			return io[addr - 0xFF00];

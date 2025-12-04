@@ -1,5 +1,6 @@
 #include <cstdint>
 #include "gba.hpp"
+#include "memory.hpp"
 
 // from https://github.com/retrio/gb-test-roms/tree/master/instr_timing
 const uint8_t cycles[256] = {
@@ -468,6 +469,15 @@ uint8_t set(uint8_t x, int pos) {
  */
 uint8_t res(uint8_t x, int pos) {
     return x & (~(1 << pos));
+}
+
+uint16_t incr_pc() {
+    if (halt_bug) {
+        halt_bug = false;
+        return $PC;
+    }
+
+    return ++$PC;
 }
 
 /**
@@ -1249,14 +1259,15 @@ inline void executePrefixOp(uint8_t op) {
 }
 
 uint8_t executeOp(uint8_t op) {
-    bool imm_ime = false;
+    bool ime_imm = false;
+
     uint8_t c = cycles[op];
     
     switch (op) {
     case 0x0:
         break;
     case 0x01:
-        $BC = read16(++$PC); $PC++;
+        $BC = read16(incr_pc()); $PC++;
         break;
     case 0x02:
         write($BC, $A);
@@ -1271,14 +1282,14 @@ uint8_t executeOp(uint8_t op) {
         $B = dec($B);
         break;
     case 0x06:
-        $B = read(++$PC);
+        $B = read(incr_pc());
         break;
     case 0x07:
         $A = rl($A, true, true);
         break;
     case 0x08:
     {
-        uint16_t nn = read16(++$PC); $PC++;
+        uint16_t nn = read16(incr_pc()); $PC++;
         write(nn, (registers[5].bytes.lo));
         write(nn + 1, (registers[5].bytes.hi));
     }
@@ -1299,7 +1310,7 @@ uint8_t executeOp(uint8_t op) {
         $C = dec($C);
         break;
     case 0x0E:
-        $C = read(++$PC);
+        $C = read(incr_pc());
         break;
     case 0x0F:
         $A = rr($A, true, true);
@@ -1307,7 +1318,7 @@ uint8_t executeOp(uint8_t op) {
         // case 0x10:
             // TODO: STOP
     case 0x11:
-        $DE = read16(++$PC); $PC++;
+        $DE = read16(incr_pc()); $PC++;
         break;
     case 0x12:
         write($DE, $A);
@@ -1322,13 +1333,13 @@ uint8_t executeOp(uint8_t op) {
         $D = dec($D);
         break;
     case 0x16:
-        $D = read(++$PC);
+        $D = read(incr_pc());
         break;
     case 0x17:
         $A = rl($A, false, true);
         break;
     case 0x18:
-        $PC += (int8_t)read(++$PC);
+        $PC += (int8_t)read(incr_pc());
         break;
     case 0x19:
         $HL = add($HL, $DE);
@@ -1346,14 +1357,14 @@ uint8_t executeOp(uint8_t op) {
         $E = dec($E);
         break;
     case 0x1E:
-        $E = read(++$PC);
+        $E = read(incr_pc());
         break;
     case 0x1F:
         $A = rr($A, false, true);
         break;
     case 0x20:
     {
-        int8_t n = read(++$PC);
+        int8_t n = read(incr_pc());
 
         if (!$Z) {
             $PC += n;
@@ -1362,7 +1373,7 @@ uint8_t executeOp(uint8_t op) {
     }
     break;
     case 0x21:
-        $HL = read16(++$PC); $PC++;
+        $HL = read16(incr_pc()); $PC++;
         break;
     case 0x22:
         write($HL, $A);
@@ -1378,7 +1389,7 @@ uint8_t executeOp(uint8_t op) {
         $H = dec($H);
         break;
     case 0x26:
-        $H = read(++$PC);
+        $H = read(incr_pc());
         break;
     case 0x27:
     {
@@ -1414,7 +1425,7 @@ uint8_t executeOp(uint8_t op) {
     break;
     case 0x28:
     {
-        int8_t n = read(++$PC);
+        int8_t n = read(incr_pc());
 
         if ($Z) {
             $PC += n;
@@ -1439,14 +1450,14 @@ uint8_t executeOp(uint8_t op) {
         $L = dec($L);
         break;
     case 0x2E:
-        $L = read(++$PC);
+        $L = read(incr_pc());
         break;
     case 0x2F:
         $A = ~$A; $N = 1; $HF = 1;
         break;
     case 0x30:
     {
-        int8_t n = read(++$PC);
+        int8_t n = read(incr_pc());
 
         if (!$CR) {
             $PC += n;
@@ -1455,7 +1466,7 @@ uint8_t executeOp(uint8_t op) {
     }
     break;
     case 0x31:
-        $SP = read16(++$PC); $PC++;
+        $SP = read16(incr_pc()); $PC++;
         break;
     case 0x32:
         write($HL, $A);
@@ -1471,14 +1482,14 @@ uint8_t executeOp(uint8_t op) {
         write($HL, dec(read($HL)));
         break;
     case 0x36:
-        write($HL, read(++$PC));
+        write($HL, read(incr_pc()));
         break;
     case 0x37:
         $N = 0; $HF = 0; $CR = 1;
         break;
     case 0x38:
     {
-        int8_t n = read(++$PC);
+        int8_t n = read(incr_pc());
 
         if ($CR) {
             $PC += n;
@@ -1503,7 +1514,7 @@ uint8_t executeOp(uint8_t op) {
         $A = dec($A);
         break;
     case 0x3E:
-        $A = read(++$PC);
+        $A = read(incr_pc());
         break;
     case 0x3F:
         $N = 0; $HF = 0; $CR = ~$CR;
@@ -1903,7 +1914,7 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xC2:
     {
-        uint16_t nn = read16(++$PC); $PC++;
+        uint16_t nn = read16(incr_pc()); $PC++;
 
         if (!$Z) {
             $PC = nn; $PC--;
@@ -1912,11 +1923,11 @@ uint8_t executeOp(uint8_t op) {
     }
     break;
     case 0xC3:
-        $PC = read16(++$PC); $PC--;
+        $PC = read16(incr_pc()); $PC--;
         break;
     case 0xC4:
     {
-        uint16_t nn = read16(++$PC); $PC+=2;
+        uint16_t nn = read16(incr_pc()); $PC+=2;
 
         if (!$Z) {
             write(--$SP, registers[4].bytes.hi);
@@ -1933,10 +1944,10 @@ uint8_t executeOp(uint8_t op) {
         write(--$SP, $C);
         break;
     case 0xC6:
-        $A = add($A, read(++$PC));
+        $A = add($A, read(incr_pc()));
         break;
     case 0xC7:
-        $PC++;
+        incr_pc();
         write(--$SP, registers[4].bytes.hi);
         write(--$SP, registers[4].bytes.lo);
         $PC = 0x00;  $PC--;
@@ -1952,7 +1963,7 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xCA:
     {
-        uint16_t nn = read16(++$PC); $PC++;
+        uint16_t nn = read16(incr_pc()); $PC++;
 
         if ($Z) {
             $PC = nn; $PC--;
@@ -1962,14 +1973,14 @@ uint8_t executeOp(uint8_t op) {
     break;
     case 0xCB:
     {
-        uint8_t code = read(++$PC);
+        uint8_t code = read(incr_pc());
         executePrefixOp(code);
         c = cb_cycles[code];
     }
         break;
     case 0xCC:
     {
-        uint16_t nn = read16(++$PC); $PC+=2;
+        uint16_t nn = read16(incr_pc()); $PC+=2;
 
         if ($Z) {
             write(--$SP, registers[4].bytes.hi);
@@ -1983,17 +1994,17 @@ uint8_t executeOp(uint8_t op) {
     break;
     case 0xCD:
     {
-        uint16_t nn = read16(++$PC); $PC += 2;
+        uint16_t nn = read16(incr_pc()); $PC += 2;
         write(--$SP, registers[4].bytes.hi);
         write(--$SP, registers[4].bytes.lo);
         $PC = nn; $PC--;
     }
         break;
     case 0xCE:
-        $A = add($A, read(++$PC), true);
+        $A = add($A, read(incr_pc()), true);
         break;
     case 0xCF:
-        $PC++;
+        incr_pc();
         write(--$SP, registers[4].bytes.hi);
         write(--$SP, registers[4].bytes.lo);
         $PC = 0x07; //0x08
@@ -2009,7 +2020,7 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xD2:
     {
-        uint16_t nn = read16(++$PC); $PC++;
+        uint16_t nn = read16(incr_pc()); $PC++;
 
         if (!$CR) {
             $PC = nn; $PC--;
@@ -2019,7 +2030,7 @@ uint8_t executeOp(uint8_t op) {
     break;
     case 0xD4:
     {
-        uint16_t nn = read16(++$PC); $PC+=2;
+        uint16_t nn = read16(incr_pc()); $PC+=2;
 
         if (!$CR) {
             write(--$SP, registers[4].bytes.hi);
@@ -2036,10 +2047,10 @@ uint8_t executeOp(uint8_t op) {
         write(--$SP, $E);
         break;
     case 0xD6:
-        $A = sub($A, read(++$PC));
+        $A = sub($A, read(incr_pc()));
         break;
     case 0xD7:
-        $PC++;
+        incr_pc();
         write(--$SP, registers[4].bytes.hi);
         write(--$SP, registers[4].bytes.lo);
         $PC = 0x0F; //0x10
@@ -2056,7 +2067,7 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xDA:
     {
-        uint16_t nn = read16(++$PC); $PC++;
+        uint16_t nn = read16(incr_pc()); $PC++;
 
         if ($CR) {
             $PC = nn; $PC--;
@@ -2066,7 +2077,7 @@ uint8_t executeOp(uint8_t op) {
     break;
     case 0xDC:
     {
-        uint16_t nn = read16(++$PC); $PC+=2;
+        uint16_t nn = read16(incr_pc()); $PC+=2;
 
         if ($CR) {
             write(--$SP, registers[4].bytes.hi);
@@ -2079,16 +2090,16 @@ uint8_t executeOp(uint8_t op) {
     }
     break;
     case 0xDE:
-        $A = sub($A, read(++$PC), true);
+        $A = sub($A, read(incr_pc()), true);
         break;
     case 0xDF:
-        $PC++;
+        incr_pc();
         write(--$SP, registers[4].bytes.hi);
         write(--$SP, registers[4].bytes.lo);
         $PC = 0x17; //0x18
         break;
     case 0xE0:
-        write(0xFF00 + read(++$PC), $A);
+        write(0xFF00 + read(incr_pc()), $A);
         break;
     case 0xE1:
         $HL = read16($SP++); $SP++;
@@ -2101,34 +2112,34 @@ uint8_t executeOp(uint8_t op) {
         write(--$SP, $L);
         break;
     case 0xE6:
-        $A = and8($A, read(++$PC));
+        $A = and8($A, read(incr_pc()));
         break;
     case 0xE7:
-        $PC++;
+        incr_pc();
         write(--$SP, registers[4].bytes.hi);
         write(--$SP, registers[4].bytes.lo);
         $PC = 0x1F; //0x20
         break;
     case 0xE8:
-        $SP = add($SP, read(++$PC));
+        $SP = add($SP, read(incr_pc()));
         break;
     case 0xE9:
         $PC = $HL; $PC--;
         break;
     case 0xEA:
-        write(read16(++$PC), $A); $PC++;
+        write(read16(incr_pc()), $A); $PC++;
         break;
     case 0xEE:
-        $A = xor8($A, read(++$PC));
+        $A = xor8($A, read(incr_pc()));
         break;
     case 0xEF:
-        $PC++;
+        incr_pc();
         write(--$SP, registers[4].bytes.hi);
         write(--$SP, registers[4].bytes.lo);
         $PC = 0x27; //0x28
         break;
     case 0xF0:
-        $A = read(0xFF00 + read(++$PC));
+        $A = read(0xFF00 + read(incr_pc()));
         break;
     case 0xF1:
         $AF = read16($SP++) & 0xfff0; $SP++;
@@ -2137,45 +2148,45 @@ uint8_t executeOp(uint8_t op) {
         $A = read($C + 0xFF00);
         break;
     case 0xF3:
-        ime_sched = IME = false;
+        IME = false;
         break;
     case 0xF5:
         write(--$SP, $A);
         write(--$SP, $F);
         break;
     case 0xF6:
-        $A = or8($A, read(++$PC));
+        $A = or8($A, read(incr_pc()));
         break;
     case 0xF7:
-        $PC++;
+        incr_pc();
         write(--$SP, registers[4].bytes.hi);
         write(--$SP, registers[4].bytes.lo);
         $PC = 0x2F; //0x30
         break;
     case 0xF8:
-        $HL = add($SP, read(++$PC));
+        $HL = add($SP, read(incr_pc()));
         break;
     case 0xF9:
         $SP = $HL;
         break;
     case 0xFA:
-        $A = read(read16(++$PC)); $PC++;
+        $A = read(read16(incr_pc())); $PC++;
         break;
     case 0xFB:
-        imm_ime = ime_sched = true;
+        ime_imm = ime_sched = true;
         break;
     case 0xFE:
-        sub($A, read(++$PC));
+        sub($A, read(incr_pc()));
         break;
     case 0xFF:
-        $PC++;
+        incr_pc();
         write(--$SP, registers[4].bytes.hi);
         write(--$SP, registers[4].bytes.lo);
         $PC = 0x37; // 0x38
         break;
     }
 
-    if (!imm_ime && ime_sched) {
+    if (!ime_imm && ime_sched) {
         IME = true;
         ime_sched = false;
     }

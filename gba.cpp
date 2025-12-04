@@ -1,13 +1,13 @@
 #include <iostream>
 #include <format>
 #include <SDL.h>
-#include <bitset>
 #include <memory>
 #include "tinyfiledialogs.h"
 
 #include "gba.hpp"
 #include "opcodes.h"
 #include "ppu.hpp"
+#include "memory.hpp"
 
 /**
  * @brief Checks for and handles pending interrupts.
@@ -23,48 +23,28 @@
  * 5. Clear the IME flag.
  * The `ime_sched` flag is also cleared.
  */
-inline void checkInterrupts() {
-    uint8_t flags = memory->get(0xff0f);
-    uint8_t int_enabled = memory->get(0xffff) & flags;
+inline void handleInterrupts(uint8_t flags, uint8_t int_flags) {
+    memory->set(--$SP, registers[4].bytes.hi);
+    memory->set(--$SP, registers[4].bytes.lo);
 
-    if (int_enabled) {
-        if (halted) {
-            halted = false;
-        }
-
-        if (IME) {
-            memory->set(--$SP, registers[4].bytes.hi);
-            memory->set(--$SP, registers[4].bytes.lo);
-
-            if (int_enabled & 1) {
-                $PC = 0x40;
-                memory->set(0xff0f, flags & (~1));
-            }
-            else if (int_enabled & 2) {
-                $PC = 0x48;
-                memory->set(0xff0f, flags & (~2));
-            }
-            else if (int_enabled & 4) {
-                $PC = 0x50;
-                memory->set(0xff0f, flags & (~4));
-            }
-            else if (int_enabled & 8) {
-                $PC = 0x58;
-                memory->set(0xff0f, flags & (~8));
-            }
-            else if (int_enabled & 16) {
-                $PC = 0x60;
-                memory->set(0xff0f, flags & (~16));
-            }
-            else {
-                std::cout << "Unknown interrupt flag set";
-                $PC = 0;
-            }
-
-            IME = false;
-            ime_sched = false;
-        }
+    if (int_flags & 1) {
+        $PC = 0x40;
+        memory->set(0xff0f, flags & (~1));
+    } else if (int_flags & 2) {
+        $PC = 0x48;
+        memory->set(0xff0f, flags & (~2));
+    } else if (int_flags & 4) {
+        $PC = 0x50;
+        memory->set(0xff0f, flags & (~4));
+    } else if (int_flags & 8) {
+        $PC = 0x58;
+        memory->set(0xff0f, flags & (~8));
+    } else if (int_flags & 16) {
+        $PC = 0x60;
+        memory->set(0xff0f, flags & (~16));
     }
+
+    IME = false;
 }
 
 /**
@@ -207,26 +187,43 @@ int main(int argc, char* argv[])
             }
         }
 
-        if (!stopped) {
-            if (!halted) {
-                uint8_t op = memory->get($PC);
-                cycles = executeOp(op);
+        uint8_t flags = memory->get(0xff0f);
+        uint8_t int_enabled = memory->get(0xffff) & flags;
 
+        if (halted) {
+            if (int_enabled & 0x1F) {
+                halted = false;
+                
+                if (!IME) {
+                    halt_bug = true;
+                }
+            }
+
+            cycles = 1;
+        }
+        else if (stopped) {
+            if (int_enabled & 0x18) {
+                stopped = false;
+            }
+
+            cycles = 1;
+        } else if (int_enabled && IME) {
+            handleInterrupts(flags, int_enabled);
+            cycles = 5;
+        } else {
+            uint8_t op = memory->get($PC);
+            cycles = executeOp(op);
+            
+            if (halt_bug) {
+                halt_bug = false;
+            } else {
                 $PC++;
             }
-            else {
-                cycles = 1;
-            }
-
-            PPU->step(cycles);
-
-            timer->tick(cycles);
-
-            checkInterrupts();
         }
-        else {
 
-        }
+        PPU->step(cycles);
+        timer->tick(cycles);
+        apu->step(cycles);
     }
 
     return 0;

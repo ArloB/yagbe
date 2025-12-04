@@ -2,7 +2,8 @@
 #include "iostream"
 #include "gba.hpp"
 #include <SDL.h>
-#include <bitset>
+#include "tinyfiledialogs.h"
+#include "apu.hpp"
 
 /**
  * @brief Gets the current joypad input state based on the value written to the JOYP register.
@@ -59,6 +60,11 @@ uint8_t getInput(uint8_t val) {
  * @param io A reference to the vector storing the state of I/O registers.
  */
 void handleIO(uint8_t addr, uint8_t val, Mem* m, std::vector<uint8_t> &io) {
+	if (addr >= 0x10 && addr <= 0x3F) {
+			apu->writeRegister(addr - 0x10, val);
+			return;
+	}
+
 	uint8_t prev = io[addr];
 	io[addr] = val;
 
@@ -67,9 +73,10 @@ void handleIO(uint8_t addr, uint8_t val, Mem* m, std::vector<uint8_t> &io) {
 		io[addr] = getInput(val);
 		break;
 	case 0x02:
-		if (val == 0x81) {
-			std::cout << m->get(0xff01);
-			io[addr] = 0;
+		if ((val & 0x80) && (val & 0x01)) {
+			io[0x01] = 0xFF;
+			io[addr] &= ~0x80;
+			m->set(0xFF0F, m->get(0xFF0F) | (1 << 3));
 		}
 		break;
 	case 0x04:
@@ -122,7 +129,7 @@ bool loadBR(std::string& file, std::vector<uint8_t>& rom) {
 	f.unsetf(std::ios::skipws);
 
 	if (!f.is_open()) {
-		std::cout << "failed to open boot rom: " << file << std::endl;
+		tinyfd_messageBox("Error", "Could not open boot ROM", "ok", "error", 1);
 		return false;
 	}
 

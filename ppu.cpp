@@ -1,11 +1,11 @@
 #include "ppu.hpp"
 
-#include <iostream>
 #include "memory.hpp"
+#include "tinyfiledialogs.h"
 
 PPUObj::PPUObj() {
     if (SDL_CreateWindowAndRenderer(160, 144, 0, &win, &renderer)) {
-        std::cout << "Window could not be created\n";
+        tinyfd_messageBox("Error", "Window could not be created", "ok", "error", 1);
     }
 
     SDL_SetWindowSize(win, 480, 432);

@@ -2,11 +2,10 @@
 #define GBA_H
 
 #include <array>
-#include <vector>
 #include <memory>
 
-#include "memory.hpp"
 #include "timer.hpp"
+#include "apu.hpp"
 
 /**
  * @brief Union representing a 16-bit CPU register.
@@ -41,6 +40,10 @@ inline std::array< Register, 6 > registers;
  * @brief Global unique pointer to the Timer object.
  */
 inline std::unique_ptr<Timer> timer;
+/**
+ * @brief Global unique pointer to the APU object.
+ */
+inline std::unique_ptr<APU> apu;
 
 /**
  * @brief Flag to schedule enabling of IME (Interrupt Master Enable) after the next instruction.
@@ -58,6 +61,8 @@ inline bool halted = false;
  * @brief CPU Stopped flag. Set when STOP instruction is executed.
  */
 inline bool stopped = false;
+
+inline bool halt_bug = false;
 
 // Registers
 #define $A  registers[0].bytes.hi
