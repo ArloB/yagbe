@@ -2,7 +2,6 @@
 #define MEMORY_H
 
 #include <vector>
-#include <string>
 #include <fstream>
 
 #include "gba.hpp"

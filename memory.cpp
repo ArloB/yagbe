@@ -2,7 +2,6 @@
 #include "iostream"
 #include "gba.hpp"
 #include <SDL3/SDL.h>
-#include "tinyfiledialogs.h"
 #include "apu.hpp"
 
 /**
@@ -130,7 +129,7 @@ bool loadBR(std::string& file, std::vector<uint8_t>& rom) {
 	f.unsetf(std::ios::skipws);
 
 	if (!f.is_open()) {
-		tinyfd_messageBox("Error", "Could not open boot ROM", "ok", "error", 1);
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could not open boot ROM", NULL);
 		return false;
 	}
 

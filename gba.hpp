@@ -3,6 +3,9 @@
 
 #include <array>
 #include <memory>
+#include <string>
+#include <SDL3/SDL_dialog.h>
+#include <SDL3/SDL_messagebox.h>
 
 #include "timer.hpp"
 #include "apu.hpp"
@@ -63,6 +66,8 @@ inline bool halted = false;
 inline bool stopped = false;
 
 inline bool halt_bug = false;
+
+inline std::string romPath;
 
 // Registers
 #define $A  registers[0].bytes.hi

@@ -3,7 +3,6 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL.h>
 #include <memory>
-#include "tinyfiledialogs.h"
 
 #include "gba.hpp"
 #include "opcodes.h"
@@ -48,6 +47,17 @@ inline void handleInterrupts(uint8_t flags, uint8_t int_flags) {
     IME = false;
 }
 
+static void onFileChosen(void *userdata, const char * const *filelist, int filter) {
+    if (!filelist) {
+        return;
+    } else if (!*filelist) {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "No ROM selected", NULL);
+        SDL_Quit();
+    }
+
+    romPath = filelist[0];
+}
+
 /**
  * @brief Main entry point for the Game Boy emulator.
  *
@@ -65,36 +75,24 @@ int main(int argc, char* argv[])
     registers = std::array< Register, 6 >();
     timer = std::make_unique<Timer>();
 
-    // Use file dialog to select ROM
-    const char* filters[] = { "*.gb", "*.gbc" };
-    const char* romPath = tinyfd_openFileDialog(
-        "Select Game Boy ROM",
-        ".\\",
-        2,
-        filters,
-        "Game Boy ROMs",
-        0);
-    
-    if (!romPath) {
-        tinyfd_messageBox(
-            "Error",
-            "No ROM selected",
-            "ok",
-            "error",
-            1);
-        return -1;
+    if (! SDL_InitSubSystem(SDL_INIT_VIDEO)) {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could not INIT SDL", NULL);
+        SDL_Quit();
+    }
+
+    SDL_DialogFileFilter filters[] = { "Game Boy ROMs", "gb;gbc" };
+    SDL_ShowOpenFileDialog(onFileChosen, NULL, NULL, filters, SDL_arraysize(filters), ".\\", false);   
+ 
+    while (romPath.empty()) {
+        SDL_PumpEvents();
+        SDL_Delay(20);
     }
     
     auto f = std::ifstream(romPath, std::ios::binary);
 
     if (!f.is_open()) {
-        tinyfd_messageBox(
-            "Error",
-            "Could not open ROM",
-            "ok",
-            "error",
-            1);
-        return 1;
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could not open ROM", NULL);
+        SDL_Quit();
     }
 
     f.unsetf(std::ios::skipws);
@@ -146,13 +144,8 @@ int main(int argc, char* argv[])
         memory = std::make_unique<MBC5>(nRAM, rom_size_factor, true);
 		break;
     default:
-        tinyfd_messageBox(
-            "Error",
-            std::format("Unsupported memory chip: 0x{:x}", unsigned(chip)).c_str(),
-            "ok",
-            "error",
-            1);
-        return -1;
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", std::format("Unsupported memory chip: 0x{:x}", unsigned(chip)).c_str(), NULL);
+        SDL_Quit();
     }
 
     memory->loadROM(f);
@@ -165,16 +158,6 @@ int main(int argc, char* argv[])
         $PC = 0x100; $SP = 0xFFFE;
     }
 
-    if (! SDL_InitSubSystem(SDL_INIT_VIDEO)) {
-        tinyfd_messageBox(
-            "Error",
-            "Could not INIT SDL",
-            "ok",
-            "error",
-            1);
-        return 1;
-    }
-
     PPU = std::make_unique<PPUObj>();
 
     uint8_t cycles = 0;
@@ -184,8 +167,7 @@ int main(int argc, char* argv[])
         SDL_PumpEvents();
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
-                SDL_Quit();
-                return 0;
+                goto exit;
             }
         }
 
@@ -227,6 +209,8 @@ int main(int argc, char* argv[])
         timer->tick(cycles);
         apu->step(cycles);
     }
+
+    exit: SDL_Quit();
 
     return 0;
 }

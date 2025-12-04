@@ -1,12 +1,12 @@
 #include "ppu.hpp"
-
+#include <SDL3/SDL_messagebox.h>
 #include "memory.hpp"
-#include "tinyfiledialogs.h"
 
 PPUObj::PPUObj() {
     if (! SDL_CreateWindowAndRenderer("YAGBA",160, 144, 0, &win, &renderer)) {
-        tinyfd_messageBox("Error", "Window could not be created", "ok", "error", 1);
-        exit(1);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Window could not be created", NULL);
+        SDL_Quit();
+        return;
     }
 
     SDL_SetWindowSize(win, 480, 432);
