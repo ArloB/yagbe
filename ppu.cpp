@@ -6,6 +6,7 @@
 PPUObj::PPUObj() {
     if (! SDL_CreateWindowAndRenderer("YAGBA",160, 144, 0, &win, &renderer)) {
         tinyfd_messageBox("Error", "Window could not be created", "ok", "error", 1);
+        return;
     }
 
     SDL_SetWindowSize(win, 480, 432);
