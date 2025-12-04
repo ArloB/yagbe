@@ -11,13 +11,9 @@ set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
 add_subdirectory( SDL  EXCLUDE_FROM_ALL )
 
-set( TINYFILEDIALOGS_SOURCES tinyfiledialogs.c )
-
-add_library( tinyfiledialogs STATIC ${TINYFILEDIALOGS_SOURCES} )
-
 add_executable(gba WIN32 "gba.cpp" "opcodes.cpp" "opcodes.h" "memory.cpp" "memory.hpp" "timer.hpp" "timer.cpp" "ppu.cpp" "apu.cpp" "apu.hpp")
 
-target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC SDL3::SDL3 tinyfiledialogs )
+target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC SDL3::SDL3 )
 
 if(WIN32)
     target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC comdlg32 ole32 )
