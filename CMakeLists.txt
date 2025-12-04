@@ -7,13 +7,15 @@ set (CMAKE_CXX_STANDARD 20)
 set( SDL_STATIC ON CACHE BOOL "" FORCE )
 set( SDL_SHARED OFF CACHE BOOL "" FORCE )
 
+set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
+
 add_subdirectory(SDL)
 
 set( TINYFILEDIALOGS_SOURCES tinyfiledialogs.c )
 
 add_library( tinyfiledialogs STATIC ${TINYFILEDIALOGS_SOURCES} )
 
-add_executable(gba WIN32 "gba.cpp" "opcodes.cpp" "opcodes.h" "memory.cpp" "memory.hpp" "timer.hpp" "timer.cpp" "ppu.cpp")
+add_executable(gba WIN32 "gba.cpp" "opcodes.cpp" "opcodes.h" "memory.cpp" "memory.hpp" "timer.hpp" "timer.cpp" "ppu.cpp" "apu.cpp" "apu.hpp")
 
 target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC SDL2main SDL2-static tinyfiledialogs )
 
