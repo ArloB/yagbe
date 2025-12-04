@@ -25,9 +25,18 @@ public:
      * @param cycles The number of CPU M-cycles that have passed.
      */
     void tick(int cycles);
+
+    /**
+     * @brief Reads the current value of the DIV register (0xFF04).
+     * Returns the high byte of the internal 16-bit divider.
+     * @return The value of the DIV register.
+     */
+     uint8_t readdiv();
 private:
+    uint8_t counter;     // Internal counter 
     uint16_t divider;    // Internal counter for DIV register increments
     unsigned int timer;  // Internal counter for TIMA increments
+    int tima_reload_countdown;
 };
 
 #endif
