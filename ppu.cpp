@@ -5,7 +5,7 @@
 PPUObj::PPUObj() {
     if (! SDL_CreateWindowAndRenderer("YAGBA",160, 144, 0, &win, &renderer)) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Window could not be created", NULL);
-        SDL_Quit();
+        shouldExit = true;
         return;
     }
 

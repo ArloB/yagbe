@@ -164,11 +164,14 @@ int main(int argc, char* argv[])
     SDL_Event event;
 
     while (1) {
-        SDL_PumpEvents();
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
                 goto exit;
             }
+        }
+        
+        if (shouldExit) {
+            goto exit;
         }
 
         uint8_t flags = memory->get(0xff0f);

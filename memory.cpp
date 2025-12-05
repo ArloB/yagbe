@@ -17,33 +17,27 @@
 uint8_t getInput(uint8_t val) {
     SDL_PumpEvents();
     const bool * keys = SDL_GetKeyboardState(NULL);
-    uint8_t joypad = 0x0F; // Initialize with all buttons unpressed (1 = unpressed in GB hardware)
+    uint8_t joypad = 0x0F;
     
-    // Action buttons (bit 5 low selects these buttons)
     if (!(val & 0x20)) {
-        // Clear the bits that will be set based on button state
         joypad &= 0xF0;
         
-        // Set bits based on button state (0 = pressed, 1 = unpressed)
-        if (!keys[SDL_SCANCODE_A]) joypad |= 0x01; // A button
-        if (!keys[SDL_SCANCODE_S]) joypad |= 0x02; // B button
-        if (!keys[SDL_SCANCODE_X]) joypad |= 0x04; // Select button
-        if (!keys[SDL_SCANCODE_Z]) joypad |= 0x08; // Start button
+        if (!keys[SDL_SCANCODE_A]) joypad |= 0x01;
+        if (!keys[SDL_SCANCODE_S]) joypad |= 0x02;
+        if (!keys[SDL_SCANCODE_X]) joypad |= 0x04;
+        if (!keys[SDL_SCANCODE_Z]) joypad |= 0x08;
+        if (keys[SDL_SCANCODE_ESCAPE]) shouldExit = true;
     }
     
-    // Direction buttons (bit 4 low selects these buttons)
     if (!(val & 0x10)) {
-        // Clear the bits that will be set based on button state
         joypad &= 0xF0;
         
-        // Set bits based on button state (0 = pressed, 1 = unpressed)
-        if (!keys[SDL_SCANCODE_RIGHT]) joypad |= 0x01; // Right
-        if (!keys[SDL_SCANCODE_LEFT])  joypad |= 0x02; // Left
-        if (!keys[SDL_SCANCODE_UP])    joypad |= 0x04; // Up
-        if (!keys[SDL_SCANCODE_DOWN])  joypad |= 0x08; // Down
+        if (!keys[SDL_SCANCODE_RIGHT]) joypad |= 0x01;
+        if (!keys[SDL_SCANCODE_LEFT])  joypad |= 0x02;
+        if (!keys[SDL_SCANCODE_UP])    joypad |= 0x04;
+        if (!keys[SDL_SCANCODE_DOWN])  joypad |= 0x08;
     }
     
-    // Combine the input value (preserving bits 4-7) with the joypad state (bits 0-3)
     return (val & 0xF0) | (joypad & 0x0F);
 }
 
