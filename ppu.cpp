@@ -282,7 +282,7 @@ void PPUObj::step(int cycles) {
 		memory->set(0xff41, memory->get(0xff41) & 0xfb);
 	}
 
-    if (LY > 154) {
+    if (LY >= 154) {
         memory->set(0xff44, 0);
         dFlag = false;
     }

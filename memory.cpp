@@ -55,7 +55,7 @@ uint8_t getInput(uint8_t val) {
  */
 void handleIO(uint8_t addr, uint8_t val, Mem* m, std::vector<uint8_t> &io) {
 	if (addr >= 0x10 && addr <= 0x3F) {
-			apu->writeRegister(addr - 0x10, val);
+			apu->writeRegister(0xFF00 + addr, val);
 			return;
 	}
 

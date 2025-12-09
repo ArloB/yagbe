@@ -21,30 +21,29 @@
  * 3. Jump to the appropriate interrupt service routine (ISR) address.
  * 4. Clear the corresponding bit in the IF register.
  * 5. Clear the IME flag.
- * The `ime_sched` flag is also cleared.
  */
 inline void handleInterrupts(uint8_t flags, uint8_t int_flags) {
-    memory->set(--$SP, registers[4].bytes.hi);
-    memory->set(--$SP, registers[4].bytes.lo);
+    IME = false;
+    
+    memory->set(--$SP, RegisterAccess::getHi(registers[4]));
+    memory->set(--$SP, RegisterAccess::getLo(registers[4]));
 
     if (int_flags & 1) {
         $PC = 0x40;
-        memory->set(0xff0f, flags & (~1));
+        memory->set(0xff0f, flags & 0xFE);
     } else if (int_flags & 2) {
         $PC = 0x48;
-        memory->set(0xff0f, flags & (~2));
+        memory->set(0xff0f, flags & 0xFD);
     } else if (int_flags & 4) {
         $PC = 0x50;
-        memory->set(0xff0f, flags & (~4));
+        memory->set(0xff0f, flags & 0xFB);
     } else if (int_flags & 8) {
         $PC = 0x58;
-        memory->set(0xff0f, flags & (~8));
+        memory->set(0xff0f, flags & 0xF7);
     } else if (int_flags & 16) {
         $PC = 0x60;
-        memory->set(0xff0f, flags & (~16));
+        memory->set(0xff0f, flags & 0xEF);
     }
-
-    IME = false;
 }
 
 static void onFileChosen(void *userdata, const char * const *filelist, int filter) {
@@ -71,11 +70,12 @@ static void onFileChosen(void *userdata, const char * const *filelist, int filte
  * @return 0 on successful execution, -1 or 1 on error.
  */
 int main(int argc, char* argv[])
-{   
+{      
     registers = std::array< Register, 6 >();
     timer = std::make_unique<Timer>();
+    apu = std::make_unique<APU>();
 
-    if (! SDL_InitSubSystem(SDL_INIT_VIDEO)) {
+    if (! SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could not INIT SDL", NULL);
         SDL_Quit();
     }
@@ -164,39 +164,18 @@ int main(int argc, char* argv[])
     SDL_Event event;
 
     while (1) {
+        if (shouldExit) {
+            goto exit;
+        }
+        
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_EVENT_QUIT) {
                 goto exit;
             }
         }
         
-        if (shouldExit) {
-            goto exit;
-        }
-
-        uint8_t flags = memory->get(0xff0f);
-        uint8_t int_enabled = memory->get(0xffff) & flags;
-
-        if (halted) {
-            if (int_enabled & 0x1F) {
-                halted = false;
-                
-                if (!IME) {
-                    halt_bug = true;
-                }
-            }
-
+        if (halted || stopped) {
             cycles = 1;
-        }
-        else if (stopped) {
-            if (int_enabled & 0x18) {
-                stopped = false;
-            }
-
-            cycles = 1;
-        } else if (int_enabled && IME) {
-            handleInterrupts(flags, int_enabled);
-            cycles = 5;
         } else {
             uint8_t op = memory->get($PC);
             cycles = executeOp(op);
@@ -207,10 +186,30 @@ int main(int argc, char* argv[])
                 $PC++;
             }
         }
-
+        
         PPU->step(cycles);
         timer->tick(cycles);
         apu->step(cycles);
+        
+        uint8_t flags = memory->get(0xff0f);
+        uint8_t ie = memory->get(0xffff);
+        uint8_t int_enabled = ie & flags;
+        
+        if (halted && (int_enabled & 0x1F)) {
+            halted = false;
+            if (!IME) {
+                halt_bug = true;
+            }
+        } else if (stopped && (int_enabled & 0x18)) {
+            stopped = false;
+        }
+        
+        if (int_enabled && IME) {
+            handleInterrupts(flags, int_enabled);
+            PPU->step(5);
+            timer->tick(5);
+            apu->step(5);
+        }
     }
 
     exit: SDL_Quit();
