@@ -1290,8 +1290,8 @@ uint8_t executeOp(uint8_t op) {
     case 0x08:
     {
         uint16_t nn = read16(incr_pc()); $PC++;
-        write(nn, (registers[5].bytes.lo));
-        write(nn + 1, (registers[5].bytes.hi));
+        write(nn, RegisterAccess::getLo(registers[5]));
+        write(nn + 1, RegisterAccess::getHi(registers[5]));
     }
     break;
     case 0x09:
@@ -1517,7 +1517,7 @@ uint8_t executeOp(uint8_t op) {
         $A = read(incr_pc());
         break;
     case 0x3F:
-        $N = 0; $HF = 0; $CR = ~$CR;
+        $N = 0; $HF = 0; $CR = !$CR;
         break;
     case 0x40:
         $B = $B;
@@ -1930,8 +1930,8 @@ uint8_t executeOp(uint8_t op) {
         uint16_t nn = read16(incr_pc()); $PC+=2;
 
         if (!$Z) {
-            write(--$SP, registers[4].bytes.hi);
-            write(--$SP, registers[4].bytes.lo);
+            write(--$SP, RegisterAccess::getHi(registers[4]));
+            write(--$SP, RegisterAccess::getLo(registers[4]));
             $PC = nn;
             c += 3;
         }
@@ -1948,8 +1948,8 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xC7:
         incr_pc();
-        write(--$SP, registers[4].bytes.hi);
-        write(--$SP, registers[4].bytes.lo);
+        write(--$SP, RegisterAccess::getHi(registers[4]));
+        write(--$SP, RegisterAccess::getLo(registers[4]));
         $PC = 0x00;  $PC--;
         break;
     case 0xC8:
@@ -1983,8 +1983,8 @@ uint8_t executeOp(uint8_t op) {
         uint16_t nn = read16(incr_pc()); $PC+=2;
 
         if ($Z) {
-            write(--$SP, registers[4].bytes.hi);
-            write(--$SP, registers[4].bytes.lo);
+            write(--$SP, RegisterAccess::getHi(registers[4]));
+            write(--$SP, RegisterAccess::getLo(registers[4]));
             $PC = nn;
             c += 3;
         }
@@ -1995,8 +1995,8 @@ uint8_t executeOp(uint8_t op) {
     case 0xCD:
     {
         uint16_t nn = read16(incr_pc()); $PC += 2;
-        write(--$SP, registers[4].bytes.hi);
-        write(--$SP, registers[4].bytes.lo);
+        write(--$SP, RegisterAccess::getHi(registers[4]));
+        write(--$SP, RegisterAccess::getLo(registers[4]));
         $PC = nn; $PC--;
     }
         break;
@@ -2005,8 +2005,8 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xCF:
         incr_pc();
-        write(--$SP, registers[4].bytes.hi);
-        write(--$SP, registers[4].bytes.lo);
+        write(--$SP, RegisterAccess::getHi(registers[4]));
+        write(--$SP, RegisterAccess::getLo(registers[4]));
         $PC = 0x07; //0x08
         break;
     case 0xD0:
@@ -2033,8 +2033,8 @@ uint8_t executeOp(uint8_t op) {
         uint16_t nn = read16(incr_pc()); $PC+=2;
 
         if (!$CR) {
-            write(--$SP, registers[4].bytes.hi);
-            write(--$SP, registers[4].bytes.lo);
+            write(--$SP, RegisterAccess::getHi(registers[4]));
+            write(--$SP, RegisterAccess::getLo(registers[4]));
             $PC = nn;
             c += 3;
         }
@@ -2051,8 +2051,8 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xD7:
         incr_pc();
-        write(--$SP, registers[4].bytes.hi);
-        write(--$SP, registers[4].bytes.lo);
+        write(--$SP, RegisterAccess::getHi(registers[4]));
+        write(--$SP, RegisterAccess::getLo(registers[4]));
         $PC = 0x0F; //0x10
         break;
     case 0xD8:
@@ -2080,8 +2080,8 @@ uint8_t executeOp(uint8_t op) {
         uint16_t nn = read16(incr_pc()); $PC+=2;
 
         if ($CR) {
-            write(--$SP, registers[4].bytes.hi);
-            write(--$SP, registers[4].bytes.lo);
+            write(--$SP, RegisterAccess::getHi(registers[4]));
+            write(--$SP, RegisterAccess::getLo(registers[4]));
             $PC = nn;
             c += 3;
         }
@@ -2094,8 +2094,8 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xDF:
         incr_pc();
-        write(--$SP, registers[4].bytes.hi);
-        write(--$SP, registers[4].bytes.lo);
+        write(--$SP, RegisterAccess::getHi(registers[4]));
+        write(--$SP, RegisterAccess::getLo(registers[4]));
         $PC = 0x17; //0x18
         break;
     case 0xE0:
@@ -2116,8 +2116,8 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xE7:
         incr_pc();
-        write(--$SP, registers[4].bytes.hi);
-        write(--$SP, registers[4].bytes.lo);
+        write(--$SP, RegisterAccess::getHi(registers[4]));
+        write(--$SP, RegisterAccess::getLo(registers[4]));
         $PC = 0x1F; //0x20
         break;
     case 0xE8:
@@ -2134,8 +2134,8 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xEF:
         incr_pc();
-        write(--$SP, registers[4].bytes.hi);
-        write(--$SP, registers[4].bytes.lo);
+        write(--$SP, RegisterAccess::getHi(registers[4]));
+        write(--$SP, RegisterAccess::getLo(registers[4]));
         $PC = 0x27; //0x28
         break;
     case 0xF0:
@@ -2159,8 +2159,8 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xF7:
         incr_pc();
-        write(--$SP, registers[4].bytes.hi);
-        write(--$SP, registers[4].bytes.lo);
+        write(--$SP, RegisterAccess::getHi(registers[4]));
+        write(--$SP, RegisterAccess::getLo(registers[4]));
         $PC = 0x2F; //0x30
         break;
     case 0xF8:
@@ -2180,8 +2180,8 @@ uint8_t executeOp(uint8_t op) {
         break;
     case 0xFF:
         incr_pc();
-        write(--$SP, registers[4].bytes.hi);
-        write(--$SP, registers[4].bytes.lo);
+        write(--$SP, RegisterAccess::getHi(registers[4]));
+        write(--$SP, RegisterAccess::getLo(registers[4]));
         $PC = 0x37; // 0x38
         break;
     }
