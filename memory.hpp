@@ -237,7 +237,7 @@ public:
 				zero_bank_number = (ram_bank_number & 1) << 5;
 			}
 			else {
-				zero_bank_number = ((ram_bank_number & 1) << 5) | ((ram_bank_number & 2) << 5);
+				zero_bank_number = ((ram_bank_number & 1) << 5) | ((ram_bank_number & 2) << 4);
 			}
 
 			return mode ? rom[addr] : rom[0x4000 * zero_bank_number + addr];
@@ -510,7 +510,9 @@ public:
 			vRAM[addr - 0x8000] = val;
 		}
 		else if (addr < 0xC000) {
-			cRAM[0x2000 * ram_bank_number + (addr - 0xA000)] = val;
+			if (cRAM_enabled) {
+				cRAM[0x2000 * ram_bank_number + (addr - 0xA000)] = val;
+			}
 		}
 		else if (addr < 0xE000) {
 			wRAM[addr - 0xC000] = val;
@@ -663,10 +665,10 @@ public:
 		if (addr < 0x2000) {
 			cRAM_enabled = ((val & 0xF) == 0xA) && ram_banks;
 		}
-		else if (addr < 0x2000) {
+		else if (addr < 0x3000) {
 			rom_bank_number = val;
 		}
-		else if (addr < 0x3000) {
+		else if (addr < 0x4000) {
 			rom_bank_number = (rom_bank_number & ~(1UL << 8)) | (val & 1 << 8);
 		}
 		else if (addr < 0x6000) {
