@@ -73,12 +73,13 @@ int main(int argc, char* argv[])
 {      
     registers = std::array< Register, 6 >();
     timer = std::make_unique<Timer>();
-    apu = std::make_unique<APU>();
 
     if (! SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Could not INIT SDL", NULL);
         SDL_Quit();
     }
+
+    apu = std::make_unique<APU>();
 
     SDL_DialogFileFilter filters[] = { "Game Boy ROMs", "gb;gbc" };
     SDL_ShowOpenFileDialog(onFileChosen, NULL, NULL, filters, SDL_arraysize(filters), ".\\", false);   
